@@ -1,8 +1,19 @@
 #!/usr/bin/python
 # vim: set fileencoding=utf8 :
 
-import time, sys, os, random
+import time, sys, os, random, getopt
 
+
+def usage():
+    print "logstats.py <arguments>"
+    print "logstats.py exports simple statistics of response times given by stdin"
+    print "default input stream should include a response times in onlt or in second field separated by coma" 
+    print " -h current output"
+    # TODO
+    #print " -z host=<host> exports zabbix agent format as <host> value <value> " 
+    #print " -d exports also distribution of values in csv"
+    #print " -t include req/s analytics" 
+    #print " -d and -t can be combined to export distribution of req/s values"
 
 def generate_data(outf, lines):
     try:
@@ -25,7 +36,9 @@ def to_mil(i):
          i = (i*1000)
     return int(i)
 
-def read_to_array(inf):
+def read_to_array_file(inf):
+    # obsolete 
+
     try:
         fsock = open (inf,"rb", 0)
     except OSError as e:
@@ -48,6 +61,24 @@ def read_to_array(inf):
             onel = fsock.readline()
         fsock.close()	
     return j
+
+def read_to_array():
+    # obsolete
+    j = {}
+    for onel in sys.stdin:
+        # very specific - cvs with two values in place
+        both = str.split(onel,',')
+        if len(both)>1:
+            value = to_mil(float(both[1]))
+        else:
+            value = to_mil(float(onel.rstrip()))
+        if value in j.keys():
+            j[value] = j[value] + 1
+        else:
+            j[value] = 1
+    return j
+
+
 
 
 def count_percentiles(in_dict):
@@ -78,8 +109,28 @@ if __name__ == "__main__":
 
     #generate_data('test.log',1000)
 
-    new_dict = read_to_array('ts-01.prod.log')
-    #new_dict = read_to_array('test.log')
+    #new_dict = read_to_array_file('ts-01.prod.log')
+    #new_dict = read_to_array_file('test.log')
+
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "zhdt", ["host="])
+    except getopt.GetoptError as err:
+        # print help information and exit:dd
+        print err
+        usage()
+        sys.exit(2)
+    for o, a in opts:
+        if o == "-h":
+            usage()
+            sys.exit(0)
+        elif o == '-z':
+            print 'zabbix mode'
+        else:
+            usage()
+            sys.exit(2)
+
+    new_dict = read_to_array()
+
     print new_dict
     print "\n"
     res = count_percentiles(new_dict)
