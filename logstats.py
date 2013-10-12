@@ -90,10 +90,11 @@ def read_to_dict():
         # very specific - cvs with two values in place
         both = str.split(onel,',')
         if len(both)>1:
-            if len(str(both[0]))>10:
+            if float(both[0])>2147468400:
                 timez = int(int(both[0])/1000)
             else:
-                timez = int(both[0])
+                timez = int(float(both[0]))
+                print timez
             value = to_mil(float(both[1]))
         else:
             value = to_mil(float(onel.rstrip()))
