@@ -128,8 +128,11 @@ def count_percentiles(in_dict):
 	for kp, vp in perc.iteritems():
 	    if ((sum_all * kp) == i) or (((sum_all * kp) > (i - v)) and ((sum_all * kp) < (i))):
                 perc[kp] = k
+    perc["max"] = perc[1]
+    del perc[1]
     perc["min"] = mini
-    perc["avg"] = sum_favg / len(in_dict)
+    perc["avg"] = int(sum_favg / sum_all)
+    perc["total"] = sum_all
     return perc
 
 def count_reqs(in_dict):
@@ -143,21 +146,42 @@ def count_reqs(in_dict):
         if v > max_reqs:
             max_reqs = v 
         i += v
-    return {'avg':round(float(i)/len(in_dict),2),'min':min_reqs,'max':max_reqs}
+    return {'avg':round(float(i)/len(in_dict),2),'min':min_reqs,'max':max_reqs,'etime':k}
 
-def simple_out(resdict, reqsdict):
-    print "response times"
+def simple_out(resdict, reqsdict,tout,zhost):
+    if tout == 'simple':
+        print "response times"
+    if tout == 'zabbix':
+        if reqsdict == None:
+            outtime = str(int(time.time()))
+        else: 
+            outtime = reqsdict['etime']
     for k in sorted(resdict.iterkeys()):
         try:
             if float(k) > 0:
-                outk = 'perc' + str(int (k*100))
+                outk = str(int (k*100))+"perc"
         except:
             outk = k
-        print outk+','+str(resdict[k])
+        if tout == 'zabbix':
+            if str(k) != 'total':
+                value = str(float(resdict[k])/1000)
+            else:
+                value = str(resdict[k])
+            print zhost+outk+' '+str(outtime)+' '+value
+        else:
+            print outk+','+str(resdict[k])
     if reqsdict != None:
-        print "requests per second"
+        if tout == 'simple':
+            print "requests per second"
         for k in sorted(reqsdict.iterkeys()):
-            print str(k)+','+str(reqsdict[k])
+            if tout == 'zabbix':
+                if str(k) != 'etime':
+                    value = str(float(reqsdict[k])/1000)
+                else:
+                    value = str(reqsdict[k])
+                print zhost+'reqs'+str(k)+' '+str(outtime)+' '+value
+            else:
+                print str(k)+','+str(reqsdict[k])
     
 def more_out(dicts):
     print "distribution of values - reponse times"
@@ -186,12 +210,18 @@ if __name__ == "__main__":
         print err
         usage()
         sys.exit(2)
+    tout = 'simple'
+    zhost = 'zabbix default.'
     for o, a in opts:
         if o == "-h":
             usage()
             sys.exit(0)
         elif o == '-d':
             distv = True
+        elif o == '-z':
+            tout = 'zabbix'
+        elif o == '--host':
+            zhost = a
         else:
             usage()
             sys.exit(2)
@@ -202,7 +232,7 @@ if __name__ == "__main__":
         reqs = count_reqs(new_dict['requests'])
     else:
         reqs = None
-    simple_out(res,reqs)
+    simple_out(res,reqs,tout,zhost)
     if distv:
         more_out(new_dict)
     
